@@ -63,28 +63,40 @@ fi
 export CC=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-gcc
 export CXX=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-g++
 export LD=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-ld
-export AR=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-ar     
+export AR=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-ar
+
+if [ "$CTNG_PRESET" = "x86_64-multilib-linux-musl" ]; then
+  RUST_TARGET="x86_64-unknown-linux-musl"
+elif [ "$CTNG_PRESET" = "aarch64-linux-musl" ]; then
+  RUST_TARGET="aarch64-unknown-linux-musl"
+else
+  echo "Unsupported CTNG_PRESET: $CTNG_PRESET"
+  exit 1
+fi
+
+TARGET_UNDERSCORE=${RUST_TARGET//-/_}
+TARGET_UPPER=${TARGET_UNDERSCORE^^}
 
 # Exports for cc crate
 # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
-export RANLIB_x86_64_unknown_linux_musl=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-ranlib     
-export CC_x86_64_unknown_linux_musl=$CC
-export CXX_x86_64_unknown_linux_musl=$CXX
-export AR_x86_64_unknown_linux_musl=$AR
-export LD_x86_64_unknown_linux_musl=$LD
+export RANLIB_${TARGET_UNDERSCORE}=$HOME/x-tools/$CTNG_PRESET/bin/$CTNG_PRESET-ranlib
+export CC_${TARGET_UNDERSCORE}=$CC
+export CXX_${TARGET_UNDERSCORE}=$CXX
+export AR_${TARGET_UNDERSCORE}=$AR
+export LD_${TARGET_UNDERSCORE}=$LD
 
 # Set environment variables for static linking
 export OPENSSL_STATIC=true
 export RUSTFLAGS="-C link-arg=-static"
 
 # We specify the compiler that will invoke linker
-export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=$CC
+export CARGO_TARGET_${TARGET_UPPER}_LINKER=$CC
 
 # Add target
-rustup target add x86_64-unknown-linux-musl
+rustup target add $RUST_TARGET
 
 # Install missing dependencies
-cargo fetch --target x86_64-unknown-linux-musl
+cargo fetch --target $RUST_TARGET
 
 # Patch missing include in librocksdb-sys-0.16.0+8.10.0. Credit: @supertypo
 FILE_PATH=$(find $HOME/.cargo/registry/src/ -path "*/librocksdb-sys-0.16.0+8.10.0/*/offpeak_time_info.h")
